@@ -12,6 +12,9 @@
 #include "variante.h"
 #include "readcmd.h"
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #ifndef VARIANTE
 #error "Variante non défini !!"
 #endif
@@ -36,7 +39,7 @@ int question6_executer(char *line)
 
 	/* Remove this line when using parsecmd as it will free it */
 	free(line);
-	
+
 	return 0;
 }
 
@@ -103,12 +106,12 @@ int main() {
 
 		/* If input stream closed, normal termination */
 		if (!l) {
-		  
+
 			terminate(0);
 		}
-		
 
-		
+
+
 		if (l->err) {
 			/* Syntax error, read another command */
 			printf("error: %s\n", l->err);
@@ -128,6 +131,45 @@ int main() {
                         }
 			printf("\n");
 		}
-	}
+		//JOBS ?
+		if (strcmp(l->seq[0][0],"jobs") == 0){
+			//TODO
+		}
 
+	 //pipe
+	 if (l -> seq[1] != 0){
+		 pid_t pid = fork();
+		 if (pid == 0){
+		 	 int tuyau[2];
+		 	 pipe(tuyau);
+			 pid_t pid2 = fork();
+			 if (pid2 == 0){
+		 	 	 dup2(tuyau[0], 0);
+   		 	 close(tuyau[1]); close(tuyau[0]);
+			 	 execvp(l->seq[1][0], l->seq[1]);
+			 }
+			 dup2(tuyau[1], 1);
+	   	 close(tuyau[0]); close(tuyau[1]);
+			 execvp(l->seq[0][0], l->seq[0]);
+		 }
+	 }
+	 //no pipe
+	 else {
+		 pid_t pid = fork();
+	 	int status;
+	 	char **args = l->seq[0];
+		if (pid == 0){
+			printf("Processus enfant, ID : %d \n ", pid);
+			int res = execvp(args[0], args);
+			if (res == -1) {perror("execvp:");}
+		} else {
+		 	printf("Processus parent, ID : %d \n ", pid);
+			if (l->bg != 1
+      ){
+				waitpid(pid, &status, 0);
+		}
+	 }
+	 }
+
+ }
 }
