@@ -28,6 +28,82 @@
 #if USE_GUILE == 1
 #include <libguile.h>
 
+typedef struct info_jobs info_jobs ;
+
+struct info_jobs{
+	char text[100];
+	int pid;
+	struct info_jobs *next;
+};
+
+typedef struct info_jobs* llist;
+
+llist add(llist liste,int pid, char *args){
+	printf("Ajout d'un job_info ! , de texte %s\n",args);
+	struct info_jobs *new_cell = malloc(sizeof(struct info_jobs));
+	strcpy(new_cell->text,args);
+	new_cell->next = NULL;
+	new_cell->pid = pid;
+
+	if(liste==NULL){
+		//printf("ajout d'une cellule wallah\n");
+		return new_cell;
+	}
+	else{
+		struct info_jobs *temp = liste;
+		while(temp->next!=NULL){
+			temp = temp->next;
+		}
+		temp->next=new_cell;
+		return liste;
+	}
+}
+
+void del(llist liste,int pid){
+	if(liste!=NULL){
+		struct info_jobs *prec=liste;
+		struct info_jobs *temp = liste;
+		while(prec->next!=NULL){
+			temp = prec->next;
+			if(temp->pid==pid){
+				struct info_jobs *nxt=temp->next;
+				prec->next = nxt;
+				free(temp);
+			}
+		}
+		temp = prec->next;
+		if(prec->pid==pid){
+			struct info_jobs *nxt=temp->next;
+			prec->next = nxt;
+			free(temp);
+		}
+	}
+}
+
+
+
+void display(struct info_jobs *liste){
+	struct info_jobs *temp = liste;
+	if (temp == NULL){
+		printf(" Pas de processus en background\n");
+	}else {
+		while(temp->next!=NULL){
+			printf(" Processus numéro : " );
+			printf("%i",temp->pid);
+			printf( "           " );
+			printf( "%s",temp->text);
+			printf("\n");
+			temp=temp->next;
+		}
+		printf(" Processus numéro : " );
+		printf("%i",temp->pid);
+		printf( "           " );
+		printf( temp->text);
+		printf("\n");
+		temp=temp->next;
+	}
+}
+
 int question6_executer(char *line)
 {
 	/* Question 6: Insert your code to execute the command line
@@ -64,7 +140,7 @@ void terminate(char *line) {
 
 int main() {
         printf("Variante %d: %s\n", VARIANTE, VARIANTE_STRING);
-
+				llist liste = NULL;
 #if USE_GUILE == 1
         scm_init_guile();
         /* register "executer" function in scheme */
@@ -133,7 +209,7 @@ int main() {
 		}
 		//JOBS ?
 		if (strcmp(l->seq[0][0],"jobs") == 0){
-			//TODO
+			display(liste);
 		}
 
 	 //pipe
@@ -159,17 +235,20 @@ int main() {
 	 	int status;
 	 	char **args = l->seq[0];
 		if (pid == 0){
-			printf("Processus enfant, ID : %d \n ", pid);
-			int res = execvp(args[0], args);
+			//printf("Processus enfant, ID : %d \n ", pid);
+			int res;
+			res = execvp(args[0], args);
 			if (res == -1) {perror("execvp:");}
-		} else {
-		 	printf("Processus parent, ID : %d \n ", pid);
+			}
+		 	//printf("Processus parent, ID : %d \n ", pid);
 			if (l->bg != 1
       ){
 				waitpid(pid, &status, 0);
+		}else{
+			liste = add(liste,pid,args[0]);
+		}
 		}
 	 }
-	 }
+
 
  }
-}
