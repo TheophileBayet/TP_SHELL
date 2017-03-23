@@ -39,7 +39,7 @@ struct info_jobs{
 typedef struct info_jobs* llist;
 
 llist add(llist liste,int pid, char *args){
-	printf("Ajout d'un job_info ! , de texte %s\n",args);
+	//printf("Ajout d'un job_info ! , de texte %s\n",args);
 	struct info_jobs *new_cell = malloc(sizeof(struct info_jobs));
 	strcpy(new_cell->text,args);
 	new_cell->next = NULL;
@@ -150,13 +150,14 @@ int main() {
 	while (1) {
 		struct cmdline *l;
 		char *line=0;
-		int i, j;
+		//int i, j;
 		char *prompt = "ensishell>";
 
 		/* Readline use some internal memory structure that
 		   can not be cleaned at the end of the program. Thus
 		   one memory leak per command seems unavoidable yet */
 		line = readline(prompt);
+
 		if (line == 0 || ! strncmp(line,"exit", 4)) {
 			terminate(line);
 		}
@@ -199,6 +200,7 @@ int main() {
 		if (l->bg) printf("background (&)\n");
 
 		/* Display each command of the pipe */
+		/*
 		for (i=0; l->seq[i]!=0; i++) {
 			char **cmd = l->seq[i];
 			printf("seq[%d]: ", i);
@@ -206,7 +208,7 @@ int main() {
                                 printf("'%s' ", cmd[j]);
                         }
 			printf("\n");
-		}
+		}*/
 		//JOBS ?
 		if (strcmp(l->seq[0][0],"jobs") == 0){
 			display(liste);
@@ -239,7 +241,7 @@ int main() {
 			int res;
 			res = execvp(args[0], args);
 			if (res == -1) {perror("execvp:");}
-			}
+		}else{
 		 	//printf("Processus parent, ID : %d \n ", pid);
 			if (l->bg != 1
       ){
@@ -248,7 +250,8 @@ int main() {
 			liste = add(liste,pid,args[0]);
 		}
 		}
+	}
 	 }
 
 
- }
+}
