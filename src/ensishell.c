@@ -13,7 +13,12 @@
 #include "readcmd.h"
 
 #include <sys/types.h>
+#include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+
+#include <fcntl.h>
+
 
 #ifndef VARIANTE
 #error "Variante non défini !!"
@@ -28,82 +33,6 @@
 #if USE_GUILE == 1
 #include <libguile.h>
 
-typedef struct info_jobs info_jobs ;
-
-struct info_jobs{
-	char text[100];
-	int pid;
-	struct info_jobs *next;
-};
-
-typedef struct info_jobs* llist;
-
-llist add(llist liste,int pid, char *args){
-	printf("Ajout d'un job_info ! , de texte %s\n",args);
-	struct info_jobs *new_cell = malloc(sizeof(struct info_jobs));
-	strcpy(new_cell->text,args);
-	new_cell->next = NULL;
-	new_cell->pid = pid;
-
-	if(liste==NULL){
-		//printf("ajout d'une cellule wallah\n");
-		return new_cell;
-	}
-	else{
-		struct info_jobs *temp = liste;
-		while(temp->next!=NULL){
-			temp = temp->next;
-		}
-		temp->next=new_cell;
-		return liste;
-	}
-}
-
-void del(llist liste,int pid){
-	if(liste!=NULL){
-		struct info_jobs *prec=liste;
-		struct info_jobs *temp = liste;
-		while(prec->next!=NULL){
-			temp = prec->next;
-			if(temp->pid==pid){
-				struct info_jobs *nxt=temp->next;
-				prec->next = nxt;
-				free(temp);
-			}
-		}
-		temp = prec->next;
-		if(prec->pid==pid){
-			struct info_jobs *nxt=temp->next;
-			prec->next = nxt;
-			free(temp);
-		}
-	}
-}
-
-
-
-void display(struct info_jobs *liste){
-	struct info_jobs *temp = liste;
-	if (temp == NULL){
-		printf(" Pas de processus en background\n");
-	}else {
-		while(temp->next!=NULL){
-			printf(" Processus numéro : " );
-			printf("%i",temp->pid);
-			printf( "           " );
-			printf( "%s",temp->text);
-			printf("\n");
-			temp=temp->next;
-		}
-		printf(" Processus numéro : " );
-		printf("%i",temp->pid);
-		printf( "           " );
-		printf( temp->text);
-		printf("\n");
-		temp=temp->next;
-	}
-}
-
 int question6_executer(char *line)
 {
 	/* Question 6: Insert your code to execute the command line
@@ -111,11 +40,50 @@ int question6_executer(char *line)
 	 * parsecmd, then fork+execvp, for a single command.
 	 * pipe and i/o redirection are not required.
 	 */
-	printf("Not implemented yet: can not execute %s\n", line);
+	//printf("Not implemented yet: can not execute %s\n", line);
+
 
 	/* Remove this line when using parsecmd as it will free it */
 	free(line);
 
+	return 0;
+}
+
+int redirection_et_pipe(struct cmdline* l)
+{
+	//pipe
+	if (l -> seq[1] != 0){
+		pid_t pid = fork();
+		if (pid == 0){
+			int tuyau[2];
+			pipe(tuyau);
+			pid_t pid2 = fork();
+			if (pid2 == 0){
+				dup2(tuyau[0], 0);
+				close(tuyau[1]); close(tuyau[0]);
+				execvp(l->seq[1][0], l->seq[1]);
+			}
+			dup2(tuyau[1], 1);
+			close(tuyau[0]); close(tuyau[1]);
+			execvp(l->seq[0][0], l->seq[0]);
+		}
+	}
+	if (l -> in != 0){
+		pid_t pid = fork();
+		if (pid == 0){
+			int fd = open(l->in, O_RDONLY);
+			dup(fd);
+			close(fd);
+		}
+	}
+	if (l->out != 0){
+		pid_t pid = fork();
+		if (pid == 0){
+			int fd = open(l->out, O_WRONLY);
+			dup(fd);
+			close(fd);
+		}
+	}
 	return 0;
 }
 
@@ -140,7 +108,7 @@ void terminate(char *line) {
 
 int main() {
         printf("Variante %d: %s\n", VARIANTE, VARIANTE_STRING);
-				llist liste = NULL;
+
 #if USE_GUILE == 1
         scm_init_guile();
         /* register "executer" function in scheme */
@@ -209,11 +177,12 @@ int main() {
 		}
 		//JOBS ?
 		if (strcmp(l->seq[0][0],"jobs") == 0){
-			display(liste);
+			//TODO
 		}
 
+		redirection_et_pipe(l);
 	 //pipe
-	 if (l -> seq[1] != 0){
+	 /*if (l -> seq[1] != 0){
 		 pid_t pid = fork();
 		 if (pid == 0){
 		 	 int tuyau[2];
@@ -228,27 +197,24 @@ int main() {
 	   	 close(tuyau[0]); close(tuyau[1]);
 			 execvp(l->seq[0][0], l->seq[0]);
 		 }
-	 }
+	 }*/
 	 //no pipe
-	 else {
+	// else {
 		 pid_t pid = fork();
 	 	int status;
 	 	char **args = l->seq[0];
 		if (pid == 0){
-			//printf("Processus enfant, ID : %d \n ", pid);
-			int res;
-			res = execvp(args[0], args);
+			printf("Processus enfant, ID : %d \n ", pid);
+			int res = execvp(args[0], args);
 			if (res == -1) {perror("execvp:");}
-			}
-		 	//printf("Processus parent, ID : %d \n ", pid);
+		} else {
+		 	printf("Processus parent, ID : %d \n ", pid);
 			if (l->bg != 1
       ){
 				waitpid(pid, &status, 0);
-		}else{
-			liste = add(liste,pid,args[0]);
-		}
 		}
 	 }
-
+	 //}
 
  }
+}
