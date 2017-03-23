@@ -33,6 +33,82 @@
 #if USE_GUILE == 1
 #include <libguile.h>
 
+typedef struct info_jobs info_jobs ;
+
+struct info_jobs{
+	char text[100];
+	int pid;
+	struct info_jobs *next;
+};
+
+typedef struct info_jobs* llist;
+
+llist add(llist liste,int pid, char *args){
+	//printf("Ajout d'un job_info ! , de texte %s\n",args);
+	struct info_jobs *new_cell = malloc(sizeof(struct info_jobs));
+	strcpy(new_cell->text,args);
+	new_cell->next = NULL;
+	new_cell->pid = pid;
+
+	if(liste==NULL){
+		//printf("ajout d'une cellule wallah\n");
+		return new_cell;
+	}
+	else{
+		struct info_jobs *temp = liste;
+		while(temp->next!=NULL){
+			temp = temp->next;
+		}
+		temp->next=new_cell;
+		return liste;
+	}
+}
+
+void del(llist liste,int pid){
+	if(liste!=NULL){
+		struct info_jobs *prec=liste;
+		struct info_jobs *temp = liste;
+		while(prec->next!=NULL){
+			temp = prec->next;
+			if(temp->pid==pid){
+				struct info_jobs *nxt=temp->next;
+				prec->next = nxt;
+				free(temp);
+			}
+		}
+		temp = prec->next;
+		if(prec->pid==pid){
+			struct info_jobs *nxt=temp->next;
+			prec->next = nxt;
+			free(temp);
+		}
+	}
+}
+
+
+
+void display(struct info_jobs *liste){
+	struct info_jobs *temp = liste;
+	if (temp == NULL){
+		printf(" Pas de processus en background\n");
+	}else {
+		while(temp->next!=NULL){
+			printf(" Processus numéro : " );
+			printf("%i",temp->pid);
+			printf( "           " );
+			printf( "%s",temp->text);
+			printf("\n");
+			temp=temp->next;
+		}
+		printf(" Processus numéro : " );
+		printf("%i",temp->pid);
+		printf( "           " );
+		printf( temp->text);
+		printf("\n");
+		temp=temp->next;
+	}
+}
+
 int question6_executer(char *line)
 {
 	/* Question 6: Insert your code to execute the command line
@@ -118,13 +194,14 @@ int main() {
 	while (1) {
 		struct cmdline *l;
 		char *line=0;
-		int i, j;
+		//int i, j;
 		char *prompt = "ensishell>";
 
 		/* Readline use some internal memory structure that
 		   can not be cleaned at the end of the program. Thus
 		   one memory leak per command seems unavoidable yet */
 		line = readline(prompt);
+
 		if (line == 0 || ! strncmp(line,"exit", 4)) {
 			terminate(line);
 		}
@@ -167,6 +244,7 @@ int main() {
 		if (l->bg) printf("background (&)\n");
 
 		/* Display each command of the pipe */
+		/*
 		for (i=0; l->seq[i]!=0; i++) {
 			char **cmd = l->seq[i];
 			printf("seq[%d]: ", i);
@@ -174,7 +252,7 @@ int main() {
                                 printf("'%s' ", cmd[j]);
                         }
 			printf("\n");
-		}
+		}*/
 		//JOBS ?
 		if (strcmp(l->seq[0][0],"jobs") == 0){
 			//TODO
@@ -213,8 +291,8 @@ int main() {
       ){
 				waitpid(pid, &status, 0);
 		}
+	}
 	 }
 	 //}
 
- }
 }
